@@ -30,11 +30,18 @@ export interface AMMInterface extends Interface {
       | "allowance"
       | "approve"
       | "balanceOf"
+      | "buyWithETH"
       | "decimals"
+      | "feeRate"
+      | "isLP"
       | "name"
+      | "owner"
       | "removeLiquidity"
+      | "renounceOwnership"
       | "reserveA"
       | "reserveB"
+      | "setFeeRate"
+      | "setLP"
       | "swap"
       | "symbol"
       | "tokenA"
@@ -42,13 +49,17 @@ export interface AMMInterface extends Interface {
       | "totalSupply"
       | "transfer"
       | "transferFrom"
+      | "transferOwnership"
   ): FunctionFragment;
 
   getEvent(
     nameOrSignatureOrTopic:
       | "AddLiquidity"
       | "Approval"
+      | "BuyWithETH"
+      | "OwnershipTransferred"
       | "RemoveLiquidity"
+      | "SetFeeRate"
       | "Swap"
       | "Transfer"
   ): EventFragment;
@@ -69,14 +80,33 @@ export interface AMMInterface extends Interface {
     functionFragment: "balanceOf",
     values: [AddressLike]
   ): string;
+  encodeFunctionData(
+    functionFragment: "buyWithETH",
+    values: [AddressLike]
+  ): string;
   encodeFunctionData(functionFragment: "decimals", values?: undefined): string;
+  encodeFunctionData(functionFragment: "feeRate", values?: undefined): string;
+  encodeFunctionData(functionFragment: "isLP", values: [AddressLike]): string;
   encodeFunctionData(functionFragment: "name", values?: undefined): string;
+  encodeFunctionData(functionFragment: "owner", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "removeLiquidity",
     values: [BigNumberish]
   ): string;
+  encodeFunctionData(
+    functionFragment: "renounceOwnership",
+    values?: undefined
+  ): string;
   encodeFunctionData(functionFragment: "reserveA", values?: undefined): string;
   encodeFunctionData(functionFragment: "reserveB", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "setFeeRate",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setLP",
+    values: [AddressLike, boolean]
+  ): string;
   encodeFunctionData(
     functionFragment: "swap",
     values: [AddressLike, BigNumberish, BigNumberish]
@@ -96,6 +126,10 @@ export interface AMMInterface extends Interface {
     functionFragment: "transferFrom",
     values: [AddressLike, AddressLike, BigNumberish]
   ): string;
+  encodeFunctionData(
+    functionFragment: "transferOwnership",
+    values: [AddressLike]
+  ): string;
 
   decodeFunctionResult(
     functionFragment: "addLiquidity",
@@ -104,14 +138,24 @@ export interface AMMInterface extends Interface {
   decodeFunctionResult(functionFragment: "allowance", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "approve", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "balanceOf", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "buyWithETH", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "decimals", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "feeRate", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "isLP", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "name", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "removeLiquidity",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(
+    functionFragment: "renounceOwnership",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "reserveA", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "reserveB", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "setFeeRate", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "setLP", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "swap", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "symbol", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "tokenA", data: BytesLike): Result;
@@ -123,6 +167,10 @@ export interface AMMInterface extends Interface {
   decodeFunctionResult(functionFragment: "transfer", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "transferFrom",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "transferOwnership",
     data: BytesLike
   ): Result;
 }
@@ -170,6 +218,44 @@ export namespace ApprovalEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
+export namespace BuyWithETHEvent {
+  export type InputTuple = [
+    buyer: AddressLike,
+    tokenOut: AddressLike,
+    ethIn: BigNumberish,
+    tokenAmount: BigNumberish
+  ];
+  export type OutputTuple = [
+    buyer: string,
+    tokenOut: string,
+    ethIn: bigint,
+    tokenAmount: bigint
+  ];
+  export interface OutputObject {
+    buyer: string;
+    tokenOut: string;
+    ethIn: bigint;
+    tokenAmount: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace OwnershipTransferredEvent {
+  export type InputTuple = [previousOwner: AddressLike, newOwner: AddressLike];
+  export type OutputTuple = [previousOwner: string, newOwner: string];
+  export interface OutputObject {
+    previousOwner: string;
+    newOwner: string;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
 export namespace RemoveLiquidityEvent {
   export type InputTuple = [
     provider: AddressLike,
@@ -188,6 +274,18 @@ export namespace RemoveLiquidityEvent {
     amountA: bigint;
     amountB: bigint;
     liquidity: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace SetFeeRateEvent {
+  export type InputTuple = [newFeeRate: BigNumberish];
+  export type OutputTuple = [newFeeRate: bigint];
+  export interface OutputObject {
+    newFeeRate: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -304,9 +402,17 @@ export interface AMM extends BaseContract {
 
   balanceOf: TypedContractMethod<[account: AddressLike], [bigint], "view">;
 
+  buyWithETH: TypedContractMethod<[tokenOut: AddressLike], [void], "payable">;
+
   decimals: TypedContractMethod<[], [bigint], "view">;
 
+  feeRate: TypedContractMethod<[], [bigint], "view">;
+
+  isLP: TypedContractMethod<[arg0: AddressLike], [boolean], "view">;
+
   name: TypedContractMethod<[], [string], "view">;
+
+  owner: TypedContractMethod<[], [string], "view">;
 
   removeLiquidity: TypedContractMethod<
     [amount: BigNumberish],
@@ -314,9 +420,23 @@ export interface AMM extends BaseContract {
     "nonpayable"
   >;
 
+  renounceOwnership: TypedContractMethod<[], [void], "nonpayable">;
+
   reserveA: TypedContractMethod<[], [bigint], "view">;
 
   reserveB: TypedContractMethod<[], [bigint], "view">;
+
+  setFeeRate: TypedContractMethod<
+    [_feeRate: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
+  setLP: TypedContractMethod<
+    [user: AddressLike, status: boolean],
+    [void],
+    "nonpayable"
+  >;
 
   swap: TypedContractMethod<
     [tokenIn: AddressLike, amountIn: BigNumberish, minAmountOut: BigNumberish],
@@ -341,6 +461,12 @@ export interface AMM extends BaseContract {
   transferFrom: TypedContractMethod<
     [from: AddressLike, to: AddressLike, value: BigNumberish],
     [boolean],
+    "nonpayable"
+  >;
+
+  transferOwnership: TypedContractMethod<
+    [newOwner: AddressLike],
+    [void],
     "nonpayable"
   >;
 
@@ -373,20 +499,45 @@ export interface AMM extends BaseContract {
     nameOrSignature: "balanceOf"
   ): TypedContractMethod<[account: AddressLike], [bigint], "view">;
   getFunction(
+    nameOrSignature: "buyWithETH"
+  ): TypedContractMethod<[tokenOut: AddressLike], [void], "payable">;
+  getFunction(
     nameOrSignature: "decimals"
   ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "feeRate"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "isLP"
+  ): TypedContractMethod<[arg0: AddressLike], [boolean], "view">;
   getFunction(
     nameOrSignature: "name"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
+    nameOrSignature: "owner"
+  ): TypedContractMethod<[], [string], "view">;
+  getFunction(
     nameOrSignature: "removeLiquidity"
   ): TypedContractMethod<[amount: BigNumberish], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "renounceOwnership"
+  ): TypedContractMethod<[], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "reserveA"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "reserveB"
   ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "setFeeRate"
+  ): TypedContractMethod<[_feeRate: BigNumberish], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "setLP"
+  ): TypedContractMethod<
+    [user: AddressLike, status: boolean],
+    [void],
+    "nonpayable"
+  >;
   getFunction(
     nameOrSignature: "swap"
   ): TypedContractMethod<
@@ -420,6 +571,9 @@ export interface AMM extends BaseContract {
     [boolean],
     "nonpayable"
   >;
+  getFunction(
+    nameOrSignature: "transferOwnership"
+  ): TypedContractMethod<[newOwner: AddressLike], [void], "nonpayable">;
 
   getEvent(
     key: "AddLiquidity"
@@ -436,11 +590,32 @@ export interface AMM extends BaseContract {
     ApprovalEvent.OutputObject
   >;
   getEvent(
+    key: "BuyWithETH"
+  ): TypedContractEvent<
+    BuyWithETHEvent.InputTuple,
+    BuyWithETHEvent.OutputTuple,
+    BuyWithETHEvent.OutputObject
+  >;
+  getEvent(
+    key: "OwnershipTransferred"
+  ): TypedContractEvent<
+    OwnershipTransferredEvent.InputTuple,
+    OwnershipTransferredEvent.OutputTuple,
+    OwnershipTransferredEvent.OutputObject
+  >;
+  getEvent(
     key: "RemoveLiquidity"
   ): TypedContractEvent<
     RemoveLiquidityEvent.InputTuple,
     RemoveLiquidityEvent.OutputTuple,
     RemoveLiquidityEvent.OutputObject
+  >;
+  getEvent(
+    key: "SetFeeRate"
+  ): TypedContractEvent<
+    SetFeeRateEvent.InputTuple,
+    SetFeeRateEvent.OutputTuple,
+    SetFeeRateEvent.OutputObject
   >;
   getEvent(
     key: "Swap"
@@ -480,6 +655,28 @@ export interface AMM extends BaseContract {
       ApprovalEvent.OutputObject
     >;
 
+    "BuyWithETH(address,address,uint256,uint256)": TypedContractEvent<
+      BuyWithETHEvent.InputTuple,
+      BuyWithETHEvent.OutputTuple,
+      BuyWithETHEvent.OutputObject
+    >;
+    BuyWithETH: TypedContractEvent<
+      BuyWithETHEvent.InputTuple,
+      BuyWithETHEvent.OutputTuple,
+      BuyWithETHEvent.OutputObject
+    >;
+
+    "OwnershipTransferred(address,address)": TypedContractEvent<
+      OwnershipTransferredEvent.InputTuple,
+      OwnershipTransferredEvent.OutputTuple,
+      OwnershipTransferredEvent.OutputObject
+    >;
+    OwnershipTransferred: TypedContractEvent<
+      OwnershipTransferredEvent.InputTuple,
+      OwnershipTransferredEvent.OutputTuple,
+      OwnershipTransferredEvent.OutputObject
+    >;
+
     "RemoveLiquidity(address,uint256,uint256,uint256)": TypedContractEvent<
       RemoveLiquidityEvent.InputTuple,
       RemoveLiquidityEvent.OutputTuple,
@@ -489,6 +686,17 @@ export interface AMM extends BaseContract {
       RemoveLiquidityEvent.InputTuple,
       RemoveLiquidityEvent.OutputTuple,
       RemoveLiquidityEvent.OutputObject
+    >;
+
+    "SetFeeRate(uint256)": TypedContractEvent<
+      SetFeeRateEvent.InputTuple,
+      SetFeeRateEvent.OutputTuple,
+      SetFeeRateEvent.OutputObject
+    >;
+    SetFeeRate: TypedContractEvent<
+      SetFeeRateEvent.InputTuple,
+      SetFeeRateEvent.OutputTuple,
+      SetFeeRateEvent.OutputObject
     >;
 
     "Swap(address,address,address,uint256,uint256)": TypedContractEvent<

@@ -1,6 +1,5 @@
 import { ethers } from "hardhat";
 
-// 声明 ERC20 带 mint/approve 类型（用于类型断言）
 type ERC20Extended = {
   mint: (to: string, amount: bigint) => Promise<any>;
   approve: (spender: string, amount: bigint) => Promise<any>;
@@ -27,25 +26,29 @@ async function main() {
   console.log("Token A deployed to:", tokenAAddress);
   console.log("Token B deployed to:", tokenBAddress);
 
-  // 3️⃣ 部署 AMM 合约
+  // 3️⃣ 部署 AMM 合约（owner 默认是 deployer）
   const AMM = await ethers.getContractFactory("AMM");
-  const amm = await AMM.deploy(tokenAAddress, tokenBAddress);
-  await amm.waitForDeployment();
-  const ammAddress = await amm.getAddress();
+  const ammContract = await AMM.deploy(tokenAAddress, tokenBAddress);
+  await ammContract.waitForDeployment();
+  const ammAddress = await ammContract.getAddress();
   console.log("AMM deployed to:", ammAddress);
 
-  // 4️⃣ Mint 10000 TokenA/B 给 deployer
-  const mintAmount = ethers.parseUnits("10000", 18);
+  // 4️⃣ 设置 deployer 为 LP 用户（必需！）
+  await ammContract.setLP(deployer.address, true);
+  console.log("✅ 已将 deployer 设置为 LP 用户");
+
+  // 5️⃣ Mint 10000 TokenA/B 给 deployer
+  const mintAmount = ethers.parseUnits("3000", 18);
   await tokenA.mint(deployer.address, mintAmount);
   await tokenB.mint(deployer.address, mintAmount);
-  console.log("Minted 10000 A/B tokens to deployer");
+  console.log("Minted 3000 A/B tokens to deployer");
 
-  // 5️⃣ Approve 并添加初始流动性（1000 A : 2000 B）
+  // 6️⃣ Approve 并添加初始流动性（1000 A : 2000 B）
   const initialAmountA = ethers.parseUnits("1000", 18);
   const initialAmountB = ethers.parseUnits("2000", 18);
   await tokenA.approve(ammAddress, initialAmountA);
   await tokenB.approve(ammAddress, initialAmountB);
-  await amm.addLiquidity(initialAmountA, initialAmountB);
+  await ammContract.addLiquidity(initialAmountA, initialAmountB);
 
   console.log("✅ 初始流动性已添加成功");
 }
