@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { ethers } from "ethers";
 import { Input, Button, Typography, Divider, message } from "antd";
 import Layout from "../components/Layout";
+import Navbar from "../components/Navbar";
+import theme from "../components/theme";
 import AMM_ABI from "../abi/AMM.json";
 import ERC20_ABI from "../abi/ERC20.json";
 
@@ -110,8 +112,17 @@ export default function LiquidityPage() {
 
   return (
     <Layout>
-      <div style={{ maxWidth: 600, margin: "auto", padding: "2rem" }}>
-        <Typography.Title level={3}>💦 流动性管理</Typography.Title>
+      <Navbar />
+      <div style={{ 
+        maxWidth: 420, 
+        margin: "auto", 
+        padding: "1.5rem",
+        background: theme.background,
+        borderRadius: 20,
+        boxShadow: theme.cardShadow,
+        marginTop: 16
+      }}>
+        <Typography.Title level={3} style={{ color: theme.textColor }}>💦 流动性管理</Typography.Title>
 
         <Divider orientation="left">添加流动性</Divider>
 
@@ -119,17 +130,32 @@ export default function LiquidityPage() {
           placeholder="输入 Token A 数量"
           value={amountA}
           onChange={(e) => setAmountA(e.target.value)}
-          style={{ marginBottom: 16 }}
+          style={{ 
+          marginBottom: 16,
+          background: theme.inputBackground,
+          border: `1px solid ${theme.borderColor}`,
+          color: theme.textColor,
+          borderRadius: 12
+        }}
         />
 
         <Input
           placeholder="输入 Token B 数量"
           value={amountB}
           onChange={(e) => setAmountB(e.target.value)}
-          style={{ marginBottom: 16 }}
+          style={{ 
+          marginBottom: 16,
+          background: theme.inputBackground,
+          border: `1px solid ${theme.borderColor}`,
+          color: theme.textColor,
+          borderRadius: 12
+        }}
         />
 
-        <Button type="primary" onClick={addLiquidity} loading={loading} disabled={!account}>
+        <Button 
+          type="primary" 
+          onClick={addLiquidity}
+          style={{ background: theme.buttonGradient, border: 'none' }} loading={loading} disabled={!account}>
           添加流动性
         </Button>
 
@@ -139,7 +165,13 @@ export default function LiquidityPage() {
           placeholder="输入要移除的 LP Token 数量"
           value={lpAmount}
           onChange={(e) => setLpAmount(e.target.value)}
-          style={{ marginBottom: 16 }}
+          style={{ 
+          marginBottom: 16,
+          background: theme.inputBackground,
+          border: `1px solid ${theme.borderColor}`,
+          color: theme.textColor,
+          borderRadius: 12
+        }}
         />
 
         <Button danger onClick={removeLiquidity} loading={loading} disabled={!account}>

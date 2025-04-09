@@ -3,7 +3,11 @@ import { ethers } from "ethers";
 import ReactECharts from "echarts-for-react";
 import { Segmented, Typography } from "antd";
 import AMM_ABI from "../abi/AMM.json";
-import PriceBanner from "../components/PriceBanner"; // ✅ 加入全局价格组件
+import PriceBanner from "../components/PriceBanner";
+import theme from "../components/theme";
+import Layout from "../components/Layout";
+import Navbar from "../components/Navbar";
+// ✅ 加入全局价格组件
 
 const AMM_ADDRESS = process.env.NEXT_PUBLIC_AMM_ADDRESS!;
 const DECIMALS = 18;
@@ -189,8 +193,18 @@ export default function ChartPage() {
   };
 
   return (
-    <div style={{ maxWidth: 1000, margin: "auto", padding: "2rem" }}>
-      <Typography.Title level={3}>📊 图表分析</Typography.Title>
+    <Layout>
+      <Navbar />
+      <div style={{ 
+        maxWidth: 1000,
+        margin: "auto",
+        padding: "2rem",
+        background: theme.background,
+        borderRadius: 20,
+        boxShadow: theme.cardShadow,
+        marginTop: 16
+      }}>
+      <Typography.Title level={3} style={{ color: theme.textColor }}>📊 图表分析</Typography.Title>
       <PriceBanner /> {/* ✅ 插入实时价格组件 */}
 
       <Segmented
@@ -207,6 +221,7 @@ export default function ChartPage() {
         style={{ marginBottom: 24 }}
       />
       <ReactECharts option={getOption()} style={{ height: 500 }} />
-    </div>
+      </div>
+    </Layout>
   );
 }

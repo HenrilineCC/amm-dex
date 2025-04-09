@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { ethers } from "ethers";
 import { Typography, Card } from "antd";
 import AMM_ABI from "../abi/AMM.json";
+import theme from "../components/theme";
+import Layout from "../components/Layout";
+import Navbar from "../components/Navbar";
 
 const AMM_ADDRESS = process.env.NEXT_PUBLIC_AMM_ADDRESS!;
 const DECIMALS = 18;
@@ -42,15 +45,35 @@ export default function PoolStatusPage() {
   };
 
   return (
-    <div style={{ padding: "2rem", maxWidth: 600, margin: "auto" }}>
-      <Typography.Title level={3}>📊 AMM 池子状态</Typography.Title>
+    <Layout>
+      <Navbar />
+      <div style={{ 
+        padding: "2rem",
+        maxWidth: 600, 
+        margin: "auto",
+        background: theme.background,
+        borderRadius: 20,
+        boxShadow: theme.cardShadow,
+        marginTop: 16
+      }}>
+      <Typography.Title level={3} style={{ color: theme.textColor }}>📊 AMM 池子状态</Typography.Title>
 
-      <Card style={{ marginBottom: "1rem" }}>
+      <Card style={{ 
+  marginBottom: "1rem",
+  background: theme.background,
+  borderRadius: 12,
+  boxShadow: theme.cardShadow
+}}>
         Token A：<strong>{reserveA}</strong> <br />
         Token B：<strong>{reserveB}</strong>
       </Card>
 
-      <Card style={{ marginBottom: "1rem" }}>
+      <Card style={{ 
+  marginBottom: "1rem",
+  background: theme.background,
+  borderRadius: 12,
+  boxShadow: theme.cardShadow
+}}>
         1 A ≈ <strong>{priceAtoB}</strong> B <br />
         1 B ≈ <strong>{priceBtoA}</strong> A
       </Card>
@@ -58,6 +81,7 @@ export default function PoolStatusPage() {
       <Card>
         LP Token 总供应量：<strong>{lpTotalSupply}</strong>
       </Card>
-    </div>
+      </div>
+    </Layout>
   );
 }

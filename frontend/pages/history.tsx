@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { ethers } from "ethers";
 import { List, Typography, Tag, Card } from "antd";
 import AMM_ABI from "../abi/AMM.json";
+import theme from "../components/theme";
+import Layout from "../components/Layout";
+import Navbar from "../components/Navbar";
 
 const AMM_ADDRESS = process.env.NEXT_PUBLIC_AMM_ADDRESS!;
 const DECIMALS = 18;
@@ -92,13 +95,28 @@ export default function HistoryPage() {
   };
 
   return (
-    <div style={{ maxWidth: 800, margin: "auto", padding: "2rem" }}>
-      <Typography.Title level={3}>📜 交易 & 流动性历史记录</Typography.Title>
+    <Layout>
+      <Navbar />
+      <div style={{ 
+        maxWidth: 800, 
+        margin: "auto", 
+        padding: "2rem",
+        background: theme.background,
+        borderRadius: 20,
+        boxShadow: theme.cardShadow,
+        marginTop: 16
+      }}>
+      <Typography.Title level={3} style={{ color: theme.textColor }}>📜 交易 & 流动性历史记录</Typography.Title>
 
       <List
         dataSource={events}
         renderItem={(item) => (
-          <Card style={{ marginBottom: "1rem" }}>
+          <Card style={{ 
+  marginBottom: "1rem",
+  background: theme.background,
+  borderRadius: 12,
+  boxShadow: theme.cardShadow
+}}>
             <Typography.Text>
               类型：
               <Tag color={
@@ -132,6 +150,7 @@ export default function HistoryPage() {
           </Card>
         )}
       />
-    </div>
+      </div>
+    </Layout>
   );
 }

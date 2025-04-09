@@ -4,6 +4,10 @@ import { Input, Button, Typography, message, Divider, Select } from "antd";
 import AMM_ABI from "../abi/AMM.json";
 import ERC20_ABI from "../abi/ERC20.json";
 import PriceBanner from "../components/PriceBanner";
+import Navbar from "../components/Navbar";
+import Layout from "../components/Layout";
+import theme from "../components/theme";
+
 
 const AMM_ADDRESS = process.env.NEXT_PUBLIC_AMM_ADDRESS!;
 const tokenAAddress = process.env.NEXT_PUBLIC_TOKEN_A_ADDRESS!;
@@ -101,8 +105,18 @@ export default function SwapPage() {
   };
 
   return (
-    <div style={{ maxWidth: 500, margin: "auto", padding: "2rem" }}>
-      <Typography.Title level={3}>🔄 Swap</Typography.Title>
+    <Layout>
+      <Navbar />
+      <div style={{ 
+        maxWidth: 420, 
+        margin: "auto", 
+        padding: "1.5rem",
+        background: theme.background,
+        borderRadius: 20,
+        boxShadow: theme.cardShadow,
+        marginTop: 16
+      }}>
+      <Typography.Title level={3} style={{ color: theme.textColor }}>🔄 Swap</Typography.Title>
       <PriceBanner />
 
       <Button
@@ -111,7 +125,15 @@ export default function SwapPage() {
           setAmountOut("0");
           estimateOutput(amountIn);
         }}
-        style={{ marginTop: 20, marginBottom: 20 }}
+        style={{ 
+          marginTop: 16, 
+          marginBottom: 16,
+          width: "100%",
+          background: theme.inputBackground,
+          border: `1px solid ${theme.borderColor}`,
+          color: theme.textColor,
+          borderRadius: 12
+        }}
       >
         切换方向：{direction === "AtoB" ? "A → B" : "B → A"}
       </Button>
@@ -120,7 +142,14 @@ export default function SwapPage() {
         placeholder={`输入 ${direction === "AtoB" ? "Token A" : "Token B"} 数量`}
         value={amountIn}
         onChange={handleAmountChange}
-        style={{ marginBottom: "1rem" }}
+        style={{ 
+          marginBottom: "1rem",
+          background: theme.inputBackground,
+          border: `1px solid ${theme.borderColor}`,
+          color: theme.textColor,
+          borderRadius: 12,
+          padding: "12px 16px"
+        }}
       />
 
       <Typography.Text>
@@ -157,9 +186,19 @@ export default function SwapPage() {
         onClick={handleSwap}
         loading={loading}
         disabled={!account || !amountIn}
+        style={{
+          width: "100%",
+          background: theme.buttonGradient,
+          border: "none",
+          borderRadius: 12,
+          height: 48,
+          fontSize: 16,
+          fontWeight: 600
+        }}
       >
         执行 Swap
       </Button>
     </div>
+    </Layout>
   );
 }
