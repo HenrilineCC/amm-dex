@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ethers } from "ethers";
-import { Typography, Card } from "antd";
+import { Typography, Card, Button, message } from "antd";
 import AMM_ABI from "../abi/AMM.json";
 import theme from "../components/theme";
 import Layout from "../components/Layout";
@@ -10,11 +10,15 @@ const AMM_ADDRESS = process.env.NEXT_PUBLIC_AMM_ADDRESS!;
 const DECIMALS = 18;
 
 export default function PoolStatusPage() {
+  const [account, setAccount] = useState<string | null>(null);
+  const [isOwner, setIsOwner] = useState(false);
   const [reserveA, setReserveA] = useState("0");
   const [reserveB, setReserveB] = useState("0");
   const [lpTotalSupply, setLpTotalSupply] = useState("0");
   const [priceAtoB, setPriceAtoB] = useState("0");
   const [priceBtoA, setPriceBtoA] = useState("0");
+  const [feesA, setFeesA] = useState("0");
+  const [feesB, setFeesB] = useState("0");
 
   useEffect(() => {
     if (window.ethereum) {
@@ -24,7 +28,14 @@ export default function PoolStatusPage() {
 
   const loadPoolData = async () => {
     const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+    const address = await signer.getAddress();
+    setAccount(address);
+
     const contract = new ethers.Contract(AMM_ADDRESS, AMM_ABI, provider);
+    const owner = await contract.owner();
+    const isOwnerAddress = address.toLowerCase() === owner.toLowerCase();
+    setIsOwner(isOwnerAddress);
 
     const reserveA_raw = await contract.reserveA();
     const reserveB_raw = await contract.reserveB();
@@ -38,49 +49,108 @@ export default function PoolStatusPage() {
     setReserveB(formattedB);
     setLpTotalSupply(formattedLP);
 
+    if (isOwnerAddress) {
+      const feesA_raw = await contract.collectedFeesA();
+      const feesB_raw = await contract.collectedFeesB();
+      setFeesA(ethers.formatUnits(feesA_raw, DECIMALS));
+      setFeesB(ethers.formatUnits(feesB_raw, DECIMALS));
+    }
+
     if (+formattedA > 0 && +formattedB > 0) {
       setPriceAtoB((+formattedB / +formattedA).toFixed(6));
       setPriceBtoA((+formattedA / +formattedB).toFixed(6));
     }
   };
 
+  const handleWithdrawFees = async () => {
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contract = new ethers.Contract(AMM_ADDRESS, AMM_ABI, signer);
+
+      const tx = await contract.withdrawFees();
+      await tx.wait();
+      message.success("手续费已成功提取 ✅");
+      loadPoolData();
+    } catch (err) {
+      console.error(err);
+      message.error("手续费提取失败 ❌");
+    }
+  };
+
   return (
     <Layout>
       <Navbar />
-      <div style={{ 
-        padding: "2rem",
-        maxWidth: 600, 
-        margin: "auto",
-        background: theme.background,
-        borderRadius: 20,
-        boxShadow: theme.cardShadow,
-        marginTop: 16
-      }}>
-      <Typography.Title level={3} style={{ color: theme.textColor }}>📊 AMM 池子状态</Typography.Title>
+      <div
+        style={{
+          padding: "2rem",
+          maxWidth: 600,
+          margin: "auto",
+          background: theme.background,
+          borderRadius: 20,
+          boxShadow: theme.cardShadow,
+          marginTop: 16,
+        }}
+      >
+        <Typography.Title level={3} style={{ color: theme.textColor }}>
+          📊 AMM 池子状态
+        </Typography.Title>
 
-      <Card style={{ 
-  marginBottom: "1rem",
-  background: theme.background,
-  borderRadius: 12,
-  boxShadow: theme.cardShadow
-}}>
-        Token A：<strong>{reserveA}</strong> <br />
-        Token B：<strong>{reserveB}</strong>
-      </Card>
+        <Card
+          style={{
+            marginBottom: "1rem",
+            background: theme.background,
+            borderRadius: 12,
+            boxShadow: theme.cardShadow,
+          }}
+        >
+          Token A：<strong>{reserveA}</strong> <br />
+          Token B：<strong>{reserveB}</strong>
+        </Card>
 
-      <Card style={{ 
-  marginBottom: "1rem",
-  background: theme.background,
-  borderRadius: 12,
-  boxShadow: theme.cardShadow
-}}>
-        1 A ≈ <strong>{priceAtoB}</strong> B <br />
-        1 B ≈ <strong>{priceBtoA}</strong> A
-      </Card>
+        <Card
+          style={{
+            marginBottom: "1rem",
+            background: theme.background,
+            borderRadius: 12,
+            boxShadow: theme.cardShadow,
+          }}
+        >
+          1 A ≈ <strong>{priceAtoB}</strong> B <br />
+          1 B ≈ <strong>{priceBtoA}</strong> A
+        </Card>
 
-      <Card>
-        LP Token 总供应量：<strong>{lpTotalSupply}</strong>
-      </Card>
+        <Card
+          style={{
+            marginBottom: "1rem",
+            background: theme.background,
+            borderRadius: 12,
+            boxShadow: theme.cardShadow,
+          }}
+        >
+          LP Token 总供应量：<strong>{lpTotalSupply}</strong>
+        </Card>
+
+        {isOwner && (
+          <>
+            <Card
+              style={{
+                marginBottom: "1rem",
+                background: theme.background,
+                borderRadius: 12,
+                boxShadow: theme.cardShadow,
+              }}
+            >
+              <Typography.Text strong>累积手续费（仅管理员可见）</Typography.Text> <br />
+              Token A: <strong>{feesA}</strong> <br />
+              Token B: <strong>{feesB}</strong>
+            </Card>
+
+            <Button type="primary" block onClick={handleWithdrawFees}>
+              提取全部手续费
+            </Button>
+          </>
+        )}
       </div>
     </Layout>
   );

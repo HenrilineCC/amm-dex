@@ -1,7 +1,7 @@
 // pages/liquidity.tsx
 import { useEffect, useState } from "react";
 import { ethers } from "ethers";
-import { Input, Button, Typography, Divider, message } from "antd";
+import { Input, Button, Typography, Divider } from "antd";
 import Layout from "../components/Layout";
 import Navbar from "../components/Navbar";
 import theme from "../components/theme";
@@ -21,6 +21,7 @@ export default function LiquidityPage() {
   const [loading, setLoading] = useState(false);
   const [userLP, setUserLP] = useState("0");
   const [isLPUser, setIsLPUser] = useState(false);
+  const [feedback, setFeedback] = useState("");
 
   useEffect(() => {
     if (window.ethereum) {
@@ -50,7 +51,7 @@ export default function LiquidityPage() {
   const addLiquidity = async () => {
     if (!account || !amountA || !amountB) return;
     if (!isLPUser) {
-      message.warning("你没有 LP 权限，无法添加流动性");
+      setFeedback("⚠️ 你没有 LP 权限，无法添加流动性");
       return;
     }
 
@@ -61,7 +62,6 @@ export default function LiquidityPage() {
 
       const tokenAContract = new ethers.Contract(tokenA, ERC20_ABI, signer);
       const tokenBContract = new ethers.Contract(tokenB, ERC20_ABI, signer);
-      const amm = new ethers.Contract(AMM_ADDRESS, AMM_ABI, signer);
 
       const parsedA = ethers.parseUnits(amountA, DECIMALS);
       const parsedB = ethers.parseUnits(amountB, DECIMALS);
@@ -78,17 +78,17 @@ export default function LiquidityPage() {
         await tx.wait();
       }
 
+      const amm = new ethers.Contract(AMM_ADDRESS, AMM_ABI, signer);
       const tx = await amm.addLiquidity(parsedA, parsedB);
       await tx.wait();
 
-      message.success("添加流动性成功 ✅");
+      setFeedback("✅ 添加流动性成功");
       setAmountA("");
       setAmountB("");
       fetchUserLP(account);
-      window.dispatchEvent(new Event("priceRefresh"));
     } catch (err) {
-      console.error("添加流动性失败", err);
-      message.error("添加失败 ❌");
+      console.error(err);
+      setFeedback("❌ 添加流动性失败");
     } finally {
       setLoading(false);
     }
@@ -97,7 +97,7 @@ export default function LiquidityPage() {
   const removeLiquidity = async () => {
     if (!account || !lpAmount) return;
     if (!isLPUser) {
-      message.warning("你没有 LP 权限，无法移除流动性");
+      setFeedback("⚠️ 你没有 LP 权限，无法移除流动性");
       return;
     }
 
@@ -106,18 +106,17 @@ export default function LiquidityPage() {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const amm = new ethers.Contract(AMM_ADDRESS, AMM_ABI, signer);
-      const parsedLP = ethers.parseUnits(lpAmount, DECIMALS);
+      const parsed = ethers.parseUnits(lpAmount, DECIMALS);
 
-      const tx = await amm.removeLiquidity(parsedLP);
+      const tx = await amm.removeLiquidity(parsed);
       await tx.wait();
 
-      message.success("移除流动性成功 ✅");
+      setFeedback("✅ 移除流动性成功");
       setLpAmount("");
       fetchUserLP(account);
-      window.dispatchEvent(new Event("priceRefresh"));
     } catch (err) {
-      console.error("移除流动性失败", err);
-      message.error("移除失败 ❌");
+      console.error(err);
+      setFeedback("❌ 移除流动性失败");
     } finally {
       setLoading(false);
     }
@@ -126,89 +125,60 @@ export default function LiquidityPage() {
   return (
     <Layout>
       <Navbar />
-      <div style={{
-        maxWidth: 420,
-        margin: "auto",
-        padding: "1.5rem",
-        background: theme.background,
-        borderRadius: 20,
-        boxShadow: theme.cardShadow,
-        marginTop: 16,
-      }}>
+      <div
+        style={{
+          maxWidth: 480,
+          margin: "auto",
+          padding: "2rem",
+          background: theme.background,
+          borderRadius: 20,
+          boxShadow: theme.cardShadow,
+          marginTop: 24,
+        }}
+      >
         <Typography.Title level={3} style={{ color: theme.textColor }}>
-          💦 流动性管理
+          💧 流动性管理
         </Typography.Title>
 
-        {!isLPUser && (
-          <Typography.Text type="danger">
-            ⚠️ 你不是 LP 用户，不能添加/移除流动性。
-          </Typography.Text>
-        )}
+        <Typography.Text>你当前的 LP Token：<strong>{userLP}</strong></Typography.Text>
+        <Divider />
 
-        <Divider orientation="left">添加流动性</Divider>
-
+        <Typography.Title level={5}>添加流动性</Typography.Title>
         <Input
-          placeholder="输入 Token A 数量"
+          placeholder="Token A 数量"
           value={amountA}
           onChange={(e) => setAmountA(e.target.value)}
-          style={{
-            marginBottom: 16,
-            background: theme.inputBackground,
-            border: `1px solid ${theme.borderColor}`,
-            color: theme.textColor,
-            borderRadius: 12,
-          }}
+          style={{ marginBottom: 12 }}
         />
-
         <Input
-          placeholder="输入 Token B 数量"
+          placeholder="Token B 数量"
           value={amountB}
           onChange={(e) => setAmountB(e.target.value)}
-          style={{
-            marginBottom: 16,
-            background: theme.inputBackground,
-            border: `1px solid ${theme.borderColor}`,
-            color: theme.textColor,
-            borderRadius: 12,
-          }}
+          style={{ marginBottom: 12 }}
         />
-
-        <Button
-          type="primary"
-          onClick={addLiquidity}
-          style={{ background: theme.buttonGradient, border: "none" }}
-          loading={loading}
-          disabled={!account}
-        >
+        <Button type="primary" block onClick={addLiquidity} loading={loading}>
           添加流动性
         </Button>
 
-        <Divider orientation="left">移除流动性</Divider>
+        <Divider />
 
+        <Typography.Title level={5}>移除流动性</Typography.Title>
         <Input
-          placeholder="输入要移除的 LP Token 数量"
+          placeholder="输入移除的 LP Token 数量"
           value={lpAmount}
           onChange={(e) => setLpAmount(e.target.value)}
-          style={{
-            marginBottom: 16,
-            background: theme.inputBackground,
-            border: `1px solid ${theme.borderColor}`,
-            color: theme.textColor,
-            borderRadius: 12,
-          }}
+          style={{ marginBottom: 12 }}
         />
-
-        <Button
-          danger
-          onClick={removeLiquidity}
-          loading={loading}
-          disabled={!account}
-        >
+        <Button danger block onClick={removeLiquidity} loading={loading}>
           移除流动性
         </Button>
 
         <Divider />
-        <Typography.Text>你的 LP Token 数量：{userLP}</Typography.Text>
+        {feedback && (
+          <div style={{ marginTop: 16, color: theme.textColor }}>
+            <Typography.Text>{feedback}</Typography.Text>
+          </div>
+        )}
       </div>
     </Layout>
   );

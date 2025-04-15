@@ -13,14 +13,17 @@ contract AMM is ERC20, Ownable {
     uint256 public reserveB;
 
     uint256 public feeRate = 3; // 千分之三 = 0.3%
-
     mapping(address => bool) public isLP;
+
+    uint256 public collectedFeesA;
+    uint256 public collectedFeesB;
 
     event Swap(address indexed sender, address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOut);
     event AddLiquidity(address indexed provider, uint256 amountA, uint256 amountB, uint256 liquidity);
     event RemoveLiquidity(address indexed provider, uint256 amountA, uint256 amountB, uint256 liquidity);
     event SetFeeRate(uint256 newFeeRate);
     event BuyWithETH(address indexed buyer, address tokenOut, uint256 ethIn, uint256 tokenAmount);
+    event FeesWithdrawn(address indexed to, uint256 amountA, uint256 amountB);
 
     constructor(address _tokenA, address _tokenB) ERC20("LP Token", "LPT") Ownable(msg.sender) {
         tokenA = _tokenA;
@@ -84,21 +87,23 @@ contract AMM is ERC20, Ownable {
 
         IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
 
-        uint256 amountInWithFee = (amountIn * (1000 - feeRate)) / 1000;
+        uint256 feeAmount = (amountIn * feeRate) / 1000;
+        uint256 amountInWithFee = amountIn - feeAmount;
         uint256 amountOut = (amountInWithFee * reserveOut) / (reserveIn + amountInWithFee);
 
         require(amountOut >= minAmountOut, "Slippage too high");
 
-        IERC20(tokenOut).transfer(msg.sender, amountOut);
-
         if (isA) {
-            reserveA += amountIn;
+            reserveA += amountInWithFee;
             reserveB -= amountOut;
+            collectedFeesA += feeAmount;
         } else {
-            reserveB += amountIn;
+            reserveB += amountInWithFee;
             reserveA -= amountOut;
+            collectedFeesB += feeAmount;
         }
 
+        IERC20(tokenOut).transfer(msg.sender, amountOut);
         emit Swap(msg.sender, tokenIn, tokenOut, amountIn, amountOut);
     }
 
@@ -106,30 +111,46 @@ contract AMM is ERC20, Ownable {
         require(tokenOut == tokenA || tokenOut == tokenB, "Invalid token");
 
         bool isBuyingA = tokenOut == tokenA;
-
         uint256 reserveIn = isBuyingA ? reserveB : reserveA;
         uint256 reserveOut = isBuyingA ? reserveA : reserveB;
 
-        require(reserveOut > 0 && reserveIn > 0, "Empty pool");
+        require(reserveIn > 0 && reserveOut > 0, "Empty pool");
 
-        uint256 amountInWithFee = (msg.value * (1000 - feeRate)) / 1000;
+        uint256 feeAmount = (msg.value * feeRate) / 1000;
+        uint256 amountInWithFee = msg.value - feeAmount;
         uint256 tokenAmountOut = (amountInWithFee * reserveOut) / (reserveIn + amountInWithFee);
 
         require(tokenAmountOut > 0, "Insufficient output");
 
-        // 更新储备
         if (isBuyingA) {
-            reserveB += msg.value;
+            reserveB += amountInWithFee;
             reserveA -= tokenAmountOut;
+            collectedFeesB += feeAmount;
         } else {
-            reserveA += msg.value;
+            reserveA += amountInWithFee;
             reserveB -= tokenAmountOut;
+            collectedFeesA += feeAmount;
         }
 
         IERC20(tokenOut).transfer(msg.sender, tokenAmountOut);
-
         emit BuyWithETH(msg.sender, tokenOut, msg.value, tokenAmountOut);
         emit Swap(msg.sender, address(0), tokenOut, msg.value, tokenAmountOut);
+    }
+
+    function withdrawFees() external onlyOwner {
+        uint256 a = collectedFeesA;
+        uint256 b = collectedFeesB;
+
+        if (a > 0) {
+            collectedFeesA = 0;
+            IERC20(tokenA).transfer(owner(), a);
+        }
+        if (b > 0) {
+            collectedFeesB = 0;
+            IERC20(tokenB).transfer(owner(), b);
+        }
+
+        emit FeesWithdrawn(owner(), a, b);
     }
 
     function sqrt(uint y) internal pure returns (uint z) {
@@ -149,6 +170,5 @@ contract AMM is ERC20, Ownable {
         return x < y ? x : y;
     }
 
-    // 允许合约接收 ETH
     receive() external payable {}
 }
