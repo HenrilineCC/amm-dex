@@ -1,6 +1,7 @@
+// pages/swap.tsx
 import { useEffect, useState } from "react";
 import { ethers } from "ethers";
-import { Input, Button, Typography, Divider, Select, Alert } from "antd";
+import { Input, Button, Typography, Divider, Select, Alert, Card } from "antd";
 import AMM_ABI from "../abi/AMM.json";
 import ERC20_ABI from "../abi/ERC20.json";
 import PriceBanner from "../components/PriceBanner";
@@ -23,13 +24,17 @@ export default function SwapPage() {
   const [slippage, setSlippage] = useState(0.5);
   const [loading, setLoading] = useState(false);
   const [direction, setDirection] = useState<"AtoB" | "BtoA">("AtoB");
-  const [message, setMessage] = useState<{ type: "success" | "error"; content: string } | null>(null);
+  const [feeRate, setFeeRate] = useState<number>(0);
+  const [feeAmount, setFeeAmount] = useState<string>("0");
+  const [swapResult, setSwapResult] = useState<string>("");
 
   useEffect(() => {
-    if (window.ethereum) {
-      connectWallet();
-    }
+    if (window.ethereum) connectWallet();
   }, []);
+
+  useEffect(() => {
+    if (account) loadBalances();
+  }, [account, direction]);
 
   const connectWallet = async () => {
     const provider = new ethers.BrowserProvider(window.ethereum);
@@ -38,32 +43,45 @@ export default function SwapPage() {
     loadBalances(accounts[0]);
   };
 
-  const loadBalances = async (user: string) => {
+  const loadBalances = async (addr?: string) => {
     const provider = new ethers.BrowserProvider(window.ethereum);
-    const tokenA = new ethers.Contract(tokenAAddress, ERC20_ABI, provider);
-    const tokenB = new ethers.Contract(tokenBAddress, ERC20_ABI, provider);
+    const signer = await provider.getSigner();
+    const user = addr || account;
+    if (!user) return;
 
-    const balanceARaw = await tokenA.balanceOf(user);
-    const balanceBRaw = await tokenB.balanceOf(user);
+    const tokenA = new ethers.Contract(tokenAAddress, ERC20_ABI, signer);
+    const tokenB = new ethers.Contract(tokenBAddress, ERC20_ABI, signer);
+    const balA = await tokenA.balanceOf(user);
+    const balB = await tokenB.balanceOf(user);
 
-    setBalanceA(ethers.formatUnits(balanceARaw, DECIMALS));
-    setBalanceB(ethers.formatUnits(balanceBRaw, DECIMALS));
+    setBalanceA(ethers.formatUnits(balA, DECIMALS));
+    setBalanceB(ethers.formatUnits(balB, DECIMALS));
   };
 
   const estimateOutput = async (value: string) => {
     if (!value || isNaN(Number(value))) return;
-
     const provider = new ethers.BrowserProvider(window.ethereum);
     const contract = new ethers.Contract(AMM_ADDRESS, AMM_ABI, provider);
+    const parsed = ethers.parseUnits(value, DECIMALS);
+
+    const tokenAOnChain = await contract.tokenA();
+    const tokenBOnChain = await contract.tokenB();
+    const tokenIn = direction === "AtoB" ? tokenAOnChain : tokenBOnChain;
+
+    const feeRate = await contract.getExpectedFeeRate(tokenIn, parsed);
+    setFeeRate(Number(feeRate));
+
+    const fee = (parsed * BigInt(feeRate)) / 1000n;
+    setFeeAmount(ethers.formatUnits(fee, DECIMALS));
 
     const reserveA = await contract.reserveA();
     const reserveB = await contract.reserveB();
-
-    const amountInWithFee = (BigInt(ethers.parseUnits(value, DECIMALS)) * 997n) / 1000n;
     const reserveIn = direction === "AtoB" ? reserveA : reserveB;
     const reserveOut = direction === "AtoB" ? reserveB : reserveA;
 
+    const amountInWithFee = parsed - fee;
     const rawOut = (amountInWithFee * reserveOut) / (reserveIn + amountInWithFee);
+
     const slippageFactor = BigInt(Math.floor((1000 - slippage * 10)));
     const minAcceptable = (rawOut * slippageFactor) / 1000n;
 
@@ -79,17 +97,24 @@ export default function SwapPage() {
   const handleSwap = async () => {
     if (!window.ethereum || !account || !amountIn) return;
 
+    const parsedAmount = ethers.parseUnits(amountIn, DECIMALS);
+    const balance = direction === "AtoB"
+      ? ethers.parseUnits(balanceA, DECIMALS)
+      : ethers.parseUnits(balanceB, DECIMALS);
+
+    if (parsedAmount > balance) {
+      setSwapResult("❌ Token 余额不足，无法交易");
+      return;
+    }
+
     try {
       setLoading(true);
-      setMessage(null);
-
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const amm = new ethers.Contract(AMM_ADDRESS, AMM_ABI, signer);
 
       const tokenIn = direction === "AtoB" ? tokenAAddress : tokenBAddress;
       const tokenContract = new ethers.Contract(tokenIn, ERC20_ABI, signer);
-      const parsedAmount = ethers.parseUnits(amountIn, DECIMALS);
 
       const allowance = await tokenContract.allowance(account, AMM_ADDRESS);
       if (allowance < parsedAmount) {
@@ -101,48 +126,57 @@ export default function SwapPage() {
       const receipt = await tx.wait();
 
       if (receipt.status === 1) {
-        setMessage({ type: "success", content: "Swap 成功 ✅" });
+        setSwapResult("✅ Swap 成功");
         setAmountIn("");
         setAmountOut("0");
-        loadBalances(account);
+        loadBalances();
         window.dispatchEvent(new Event("priceRefresh"));
       } else {
-        setMessage({ type: "error", content: "Swap 失败 ❌" });
+        setSwapResult("❌ Swap 失败");
       }
     } catch (err: any) {
       console.error("Swap 错误：", err);
-      if (err?.message?.includes("Slippage too high")) {
-        setMessage({ type: "error", content: "⚠️ 滑点过高，交易失败" });
+      if (err?.message?.includes("Slippage")) {
+        setSwapResult("⚠️ 滑点过高，交易失败");
       } else {
-        setMessage({ type: "error", content: "Swap 出现错误" });
+        setSwapResult("❌ Swap 出现错误");
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const currentBalance = direction === "AtoB" ? parseFloat(balanceA) : parseFloat(balanceB);
-  const inputExceedsBalance = parseFloat(amountIn || "0") > currentBalance;
-
   return (
     <Layout>
       <Navbar />
-      <div style={{ 
-        maxWidth: 420, 
-        margin: "auto", 
-        padding: "1.5rem",
+      <div style={{
+        maxWidth: 480,
+        margin: "auto",
+        padding: "2rem",
         background: theme.background,
         borderRadius: 20,
         boxShadow: theme.cardShadow,
         marginTop: 16
       }}>
-        <Typography.Title level={3} style={{ color: theme.textColor }}>🔄 Swap</Typography.Title>
+        <Typography.Title level={3} style={{ color: theme.textColor }}>🔄 Token Swap</Typography.Title>
         <PriceBanner />
 
-        <div style={{ marginBottom: 12 }}>
-          <Typography.Text>💰 余额 A: {balanceA}</Typography.Text><br />
-          <Typography.Text>💰 余额 B: {balanceB}</Typography.Text>
-        </div>
+        <Card style={{ marginBottom: 16, background: theme.inputBackground }}>
+          <Typography.Text style={{ color: theme.textColor }}>
+            🎒 我的余额：
+          </Typography.Text>
+          <br />
+          Token A: <strong>{balanceA}</strong>
+          <br />
+          Token B: <strong>{balanceB}</strong>
+        </Card>
+
+        <Alert
+          message={`当前手续费率：${(feeRate / 10).toFixed(1)}‰，约 ${feeAmount} Token`}
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
 
         <Button
           onClick={() => {
@@ -167,7 +201,7 @@ export default function SwapPage() {
           value={amountIn}
           onChange={handleAmountChange}
           style={{
-            marginBottom: "1rem",
+            marginBottom: 12,
             background: theme.inputBackground,
             border: `1px solid ${theme.borderColor}`,
             color: theme.textColor,
@@ -176,12 +210,9 @@ export default function SwapPage() {
           }}
         />
 
-        {inputExceedsBalance && (
-          <Alert message="⚠️ 当前余额不足，无法进行 Swap" type="error" showIcon style={{ marginBottom: 12 }} />
-        )}
-
         <Typography.Text>
-          预估获得 {direction === "AtoB" ? "Token B" : "Token A"}：<strong>{amountOut}</strong>
+          预估获得 {direction === "AtoB" ? "Token B" : "Token A"}：
+          <strong>{amountOut}</strong>
         </Typography.Text>
         <br />
         <Typography.Text type="secondary">
@@ -212,7 +243,7 @@ export default function SwapPage() {
           type="primary"
           onClick={handleSwap}
           loading={loading}
-          disabled={!account || !amountIn || inputExceedsBalance}
+          disabled={!account || !amountIn}
           style={{
             width: "100%",
             background: theme.buttonGradient,
@@ -226,10 +257,10 @@ export default function SwapPage() {
           执行 Swap
         </Button>
 
-        {message && (
+        {swapResult && (
           <Alert
-            type={message.type}
-            message={message.content}
+            message={swapResult}
+            type={swapResult.startsWith("✅") ? "success" : "error"}
             showIcon
             style={{ marginTop: 16 }}
           />

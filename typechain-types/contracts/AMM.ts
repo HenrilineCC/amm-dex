@@ -30,19 +30,23 @@ export interface AMMInterface extends Interface {
       | "allowance"
       | "approve"
       | "balanceOf"
+      | "baseFee"
       | "buyWithETH"
       | "collectedFeesA"
       | "collectedFeesB"
       | "decimals"
-      | "feeRate"
+      | "feeMultiplier"
+      | "getDynamicFeeRate"
+      | "getExpectedFeeRate"
       | "isLP"
+      | "maxFee"
       | "name"
       | "owner"
       | "removeLiquidity"
       | "renounceOwnership"
       | "reserveA"
       | "reserveB"
-      | "setFeeRate"
+      | "setFeeRateParams"
       | "setLP"
       | "swap"
       | "symbol"
@@ -63,7 +67,7 @@ export interface AMMInterface extends Interface {
       | "FeesWithdrawn"
       | "OwnershipTransferred"
       | "RemoveLiquidity"
-      | "SetFeeRate"
+      | "SetFeeRateParams"
       | "Swap"
       | "Transfer"
   ): EventFragment;
@@ -84,6 +88,7 @@ export interface AMMInterface extends Interface {
     functionFragment: "balanceOf",
     values: [AddressLike]
   ): string;
+  encodeFunctionData(functionFragment: "baseFee", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "buyWithETH",
     values: [AddressLike]
@@ -97,8 +102,20 @@ export interface AMMInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(functionFragment: "decimals", values?: undefined): string;
-  encodeFunctionData(functionFragment: "feeRate", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "feeMultiplier",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getDynamicFeeRate",
+    values: [BigNumberish, BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getExpectedFeeRate",
+    values: [AddressLike, BigNumberish]
+  ): string;
   encodeFunctionData(functionFragment: "isLP", values: [AddressLike]): string;
+  encodeFunctionData(functionFragment: "maxFee", values?: undefined): string;
   encodeFunctionData(functionFragment: "name", values?: undefined): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
   encodeFunctionData(
@@ -112,8 +129,8 @@ export interface AMMInterface extends Interface {
   encodeFunctionData(functionFragment: "reserveA", values?: undefined): string;
   encodeFunctionData(functionFragment: "reserveB", values?: undefined): string;
   encodeFunctionData(
-    functionFragment: "setFeeRate",
-    values: [BigNumberish]
+    functionFragment: "setFeeRateParams",
+    values: [BigNumberish, BigNumberish, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "setLP",
@@ -154,6 +171,7 @@ export interface AMMInterface extends Interface {
   decodeFunctionResult(functionFragment: "allowance", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "approve", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "balanceOf", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "baseFee", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "buyWithETH", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "collectedFeesA",
@@ -164,8 +182,20 @@ export interface AMMInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "decimals", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "feeRate", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "feeMultiplier",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getDynamicFeeRate",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getExpectedFeeRate",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "isLP", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "maxFee", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "name", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
   decodeFunctionResult(
@@ -178,7 +208,10 @@ export interface AMMInterface extends Interface {
   ): Result;
   decodeFunctionResult(functionFragment: "reserveA", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "reserveB", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "setFeeRate", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "setFeeRateParams",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "setLP", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "swap", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "symbol", data: BytesLike): Result;
@@ -327,11 +360,17 @@ export namespace RemoveLiquidityEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
-export namespace SetFeeRateEvent {
-  export type InputTuple = [newFeeRate: BigNumberish];
-  export type OutputTuple = [newFeeRate: bigint];
+export namespace SetFeeRateParamsEvent {
+  export type InputTuple = [
+    base: BigNumberish,
+    max: BigNumberish,
+    multiplier: BigNumberish
+  ];
+  export type OutputTuple = [base: bigint, max: bigint, multiplier: bigint];
   export interface OutputObject {
-    newFeeRate: bigint;
+    base: bigint;
+    max: bigint;
+    multiplier: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -448,6 +487,8 @@ export interface AMM extends BaseContract {
 
   balanceOf: TypedContractMethod<[account: AddressLike], [bigint], "view">;
 
+  baseFee: TypedContractMethod<[], [bigint], "view">;
+
   buyWithETH: TypedContractMethod<[tokenOut: AddressLike], [void], "payable">;
 
   collectedFeesA: TypedContractMethod<[], [bigint], "view">;
@@ -456,9 +497,23 @@ export interface AMM extends BaseContract {
 
   decimals: TypedContractMethod<[], [bigint], "view">;
 
-  feeRate: TypedContractMethod<[], [bigint], "view">;
+  feeMultiplier: TypedContractMethod<[], [bigint], "view">;
+
+  getDynamicFeeRate: TypedContractMethod<
+    [amountIn: BigNumberish, reserveIn: BigNumberish],
+    [bigint],
+    "view"
+  >;
+
+  getExpectedFeeRate: TypedContractMethod<
+    [tokenIn: AddressLike, amountIn: BigNumberish],
+    [bigint],
+    "view"
+  >;
 
   isLP: TypedContractMethod<[arg0: AddressLike], [boolean], "view">;
+
+  maxFee: TypedContractMethod<[], [bigint], "view">;
 
   name: TypedContractMethod<[], [string], "view">;
 
@@ -476,8 +531,8 @@ export interface AMM extends BaseContract {
 
   reserveB: TypedContractMethod<[], [bigint], "view">;
 
-  setFeeRate: TypedContractMethod<
-    [_feeRate: BigNumberish],
+  setFeeRateParams: TypedContractMethod<
+    [_baseFee: BigNumberish, _maxFee: BigNumberish, _multiplier: BigNumberish],
     [void],
     "nonpayable"
   >;
@@ -551,6 +606,9 @@ export interface AMM extends BaseContract {
     nameOrSignature: "balanceOf"
   ): TypedContractMethod<[account: AddressLike], [bigint], "view">;
   getFunction(
+    nameOrSignature: "baseFee"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
     nameOrSignature: "buyWithETH"
   ): TypedContractMethod<[tokenOut: AddressLike], [void], "payable">;
   getFunction(
@@ -563,11 +621,28 @@ export interface AMM extends BaseContract {
     nameOrSignature: "decimals"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
-    nameOrSignature: "feeRate"
+    nameOrSignature: "feeMultiplier"
   ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "getDynamicFeeRate"
+  ): TypedContractMethod<
+    [amountIn: BigNumberish, reserveIn: BigNumberish],
+    [bigint],
+    "view"
+  >;
+  getFunction(
+    nameOrSignature: "getExpectedFeeRate"
+  ): TypedContractMethod<
+    [tokenIn: AddressLike, amountIn: BigNumberish],
+    [bigint],
+    "view"
+  >;
   getFunction(
     nameOrSignature: "isLP"
   ): TypedContractMethod<[arg0: AddressLike], [boolean], "view">;
+  getFunction(
+    nameOrSignature: "maxFee"
+  ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "name"
   ): TypedContractMethod<[], [string], "view">;
@@ -587,8 +662,12 @@ export interface AMM extends BaseContract {
     nameOrSignature: "reserveB"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
-    nameOrSignature: "setFeeRate"
-  ): TypedContractMethod<[_feeRate: BigNumberish], [void], "nonpayable">;
+    nameOrSignature: "setFeeRateParams"
+  ): TypedContractMethod<
+    [_baseFee: BigNumberish, _maxFee: BigNumberish, _multiplier: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
   getFunction(
     nameOrSignature: "setLP"
   ): TypedContractMethod<
@@ -679,11 +758,11 @@ export interface AMM extends BaseContract {
     RemoveLiquidityEvent.OutputObject
   >;
   getEvent(
-    key: "SetFeeRate"
+    key: "SetFeeRateParams"
   ): TypedContractEvent<
-    SetFeeRateEvent.InputTuple,
-    SetFeeRateEvent.OutputTuple,
-    SetFeeRateEvent.OutputObject
+    SetFeeRateParamsEvent.InputTuple,
+    SetFeeRateParamsEvent.OutputTuple,
+    SetFeeRateParamsEvent.OutputObject
   >;
   getEvent(
     key: "Swap"
@@ -767,15 +846,15 @@ export interface AMM extends BaseContract {
       RemoveLiquidityEvent.OutputObject
     >;
 
-    "SetFeeRate(uint256)": TypedContractEvent<
-      SetFeeRateEvent.InputTuple,
-      SetFeeRateEvent.OutputTuple,
-      SetFeeRateEvent.OutputObject
+    "SetFeeRateParams(uint256,uint256,uint256)": TypedContractEvent<
+      SetFeeRateParamsEvent.InputTuple,
+      SetFeeRateParamsEvent.OutputTuple,
+      SetFeeRateParamsEvent.OutputObject
     >;
-    SetFeeRate: TypedContractEvent<
-      SetFeeRateEvent.InputTuple,
-      SetFeeRateEvent.OutputTuple,
-      SetFeeRateEvent.OutputObject
+    SetFeeRateParams: TypedContractEvent<
+      SetFeeRateParamsEvent.InputTuple,
+      SetFeeRateParamsEvent.OutputTuple,
+      SetFeeRateParamsEvent.OutputObject
     >;
 
     "Swap(address,address,address,uint256,uint256)": TypedContractEvent<

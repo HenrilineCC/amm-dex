@@ -12,16 +12,21 @@ contract AMM is ERC20, Ownable {
     uint256 public reserveA;
     uint256 public reserveB;
 
-    uint256 public feeRate = 3; // 千分之三 = 0.3%
-    mapping(address => bool) public isLP;
+    // ========== 动态手续费参数 ==========
+    uint256 public baseFee = 3; // 基础手续费 千分之3
+    uint256 public maxFee = 30; // 最大手续费 千分之30
+    uint256 public feeMultiplier = 10; // 手续费增长控制因子
 
+    // 手续费累积
     uint256 public collectedFeesA;
     uint256 public collectedFeesB;
+
+    mapping(address => bool) public isLP;
 
     event Swap(address indexed sender, address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOut);
     event AddLiquidity(address indexed provider, uint256 amountA, uint256 amountB, uint256 liquidity);
     event RemoveLiquidity(address indexed provider, uint256 amountA, uint256 amountB, uint256 liquidity);
-    event SetFeeRate(uint256 newFeeRate);
+    event SetFeeRateParams(uint256 base, uint256 max, uint256 multiplier);
     event BuyWithETH(address indexed buyer, address tokenOut, uint256 ethIn, uint256 tokenAmount);
     event FeesWithdrawn(address indexed to, uint256 amountA, uint256 amountB);
 
@@ -30,12 +35,27 @@ contract AMM is ERC20, Ownable {
         tokenB = _tokenB;
     }
 
-    function setFeeRate(uint256 _feeRate) external onlyOwner {
-        require(_feeRate <= 100, "Too high");
-        feeRate = _feeRate;
-        emit SetFeeRate(_feeRate);
+    // ========== 动态手续费计算 ==========
+    function getDynamicFeeRate(uint256 amountIn, uint256 reserveIn) public view returns (uint256) {
+        if (reserveIn == 0) return maxFee;
+        uint256 ratio = (amountIn * 1000) / reserveIn; // 占储备的千分比
+        uint256 dynamic = baseFee + (ratio * feeMultiplier) / 100;
+        if (dynamic > maxFee) return maxFee;
+        return dynamic;
     }
 
+    function setFeeRateParams(uint256 _baseFee, uint256 _maxFee, uint256 _multiplier) external onlyOwner {
+        require(_baseFee <= _maxFee, "base > max");
+        baseFee = _baseFee;
+        maxFee = _maxFee;
+        feeMultiplier = _multiplier;
+        emit SetFeeRateParams(_baseFee, _maxFee, _multiplier);
+    }
+    function getExpectedFeeRate(address tokenIn, uint256 amountIn) external view returns (uint256) {
+        require(tokenIn == tokenA || tokenIn == tokenB, "invalid token");
+        uint256 reserveIn = tokenIn == tokenA ? reserveA : reserveB;
+        return getDynamicFeeRate(amountIn, reserveIn);
+    }
     function setLP(address user, bool status) external onlyOwner {
         isLP[user] = status;
     }
@@ -87,20 +107,21 @@ contract AMM is ERC20, Ownable {
 
         IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
 
-        uint256 feeAmount = (amountIn * feeRate) / 1000;
+        uint256 dynamicFee = getDynamicFeeRate(amountIn, reserveIn);
+        uint256 feeAmount = (amountIn * dynamicFee) / 1000;
         uint256 amountInWithFee = amountIn - feeAmount;
         uint256 amountOut = (amountInWithFee * reserveOut) / (reserveIn + amountInWithFee);
 
         require(amountOut >= minAmountOut, "Slippage too high");
 
         if (isA) {
+            collectedFeesA += feeAmount;
             reserveA += amountInWithFee;
             reserveB -= amountOut;
-            collectedFeesA += feeAmount;
         } else {
+            collectedFeesB += feeAmount;
             reserveB += amountInWithFee;
             reserveA -= amountOut;
-            collectedFeesB += feeAmount;
         }
 
         IERC20(tokenOut).transfer(msg.sender, amountOut);
@@ -114,25 +135,27 @@ contract AMM is ERC20, Ownable {
         uint256 reserveIn = isBuyingA ? reserveB : reserveA;
         uint256 reserveOut = isBuyingA ? reserveA : reserveB;
 
-        require(reserveIn > 0 && reserveOut > 0, "Empty pool");
+        require(reserveOut > 0 && reserveIn > 0, "Empty pool");
 
-        uint256 feeAmount = (msg.value * feeRate) / 1000;
+        uint256 dynamicFee = getDynamicFeeRate(msg.value, reserveIn);
+        uint256 feeAmount = (msg.value * dynamicFee) / 8000;
         uint256 amountInWithFee = msg.value - feeAmount;
-        uint256 tokenAmountOut = (amountInWithFee * reserveOut) / (reserveIn + amountInWithFee);
 
+        uint256 tokenAmountOut = (amountInWithFee * reserveOut) / (reserveIn + amountInWithFee);
         require(tokenAmountOut > 0, "Insufficient output");
 
         if (isBuyingA) {
+            collectedFeesB += feeAmount;
             reserveB += amountInWithFee;
             reserveA -= tokenAmountOut;
-            collectedFeesB += feeAmount;
         } else {
+            collectedFeesA += feeAmount;
             reserveA += amountInWithFee;
             reserveB -= tokenAmountOut;
-            collectedFeesA += feeAmount;
         }
 
         IERC20(tokenOut).transfer(msg.sender, tokenAmountOut);
+
         emit BuyWithETH(msg.sender, tokenOut, msg.value, tokenAmountOut);
         emit Swap(msg.sender, address(0), tokenOut, msg.value, tokenAmountOut);
     }

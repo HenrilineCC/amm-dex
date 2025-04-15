@@ -1,6 +1,7 @@
+// pages/buy.tsx
 import { useEffect, useState } from "react";
 import { ethers } from "ethers";
-import { Button, Input, Select, Typography, message, Divider } from "antd";
+import { Button, Input, Select, Typography, Divider, Alert } from "antd";
 import AMM_ABI from "../abi/AMM.json";
 import ERC20_ABI from "../abi/ERC20.json";
 import Navbar from "../components/Navbar";
@@ -18,6 +19,9 @@ export default function BuyPage() {
   const [tokenToBuy, setTokenToBuy] = useState<"A" | "B">("A");
   const [tokenAmount, setTokenAmount] = useState("");
   const [ethRequired, setEthRequired] = useState("0");
+  const [feeRate, setFeeRate] = useState(0);
+  const [feeEth, setFeeEth] = useState("0");
+  const [resultMsg, setResultMsg] = useState("");
 
   const [balanceA, setBalanceA] = useState("0");
   const [balanceB, setBalanceB] = useState("0");
@@ -63,39 +67,51 @@ export default function BuyPage() {
     const reserveA = await contract.reserveA();
     const reserveB = await contract.reserveB();
 
-    const price =
-      tokenToBuy === "A"
-        ? Number(ethers.formatUnits(reserveB, DECIMALS)) / Number(ethers.formatUnits(reserveA, DECIMALS))
-        : Number(ethers.formatUnits(reserveA, DECIMALS)) / Number(ethers.formatUnits(reserveB, DECIMALS));
+    const tokenOut = ethers.parseUnits(value, DECIMALS);
+    const reserveIn = tokenToBuy === "A" ? reserveB : reserveA;
+    const reserveOut = tokenToBuy === "A" ? reserveA : reserveB;
 
-    const requiredETH = parseFloat(value) * price;
-    setEthRequired(requiredETH.toFixed(6));
+    // 反向推导 ETH amountInWithFee
+    const amountInWithFee = (tokenOut * reserveIn) / (reserveOut - tokenOut);
+    const dynamicFee = await contract.getDynamicFeeRate(amountInWithFee, reserveIn);
+    const fee = (amountInWithFee * BigInt(dynamicFee)) / 8000n;
+    const totalETH = amountInWithFee + fee;
+
+    setFeeRate(Number(dynamicFee));
+    setFeeEth(ethers.formatUnits(fee, "ether"));
+    setEthRequired(ethers.formatUnits(totalETH, "ether"));
   };
 
   const handleBuy = async () => {
     if (!account || !tokenAmount || !ethRequired) return;
-  
+
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const amm = new ethers.Contract(AMM_ADDRESS, AMM_ABI, signer);
-  
+
       const tokenAddress = tokenToBuy === "A" ? TOKEN_A_ADDRESS : TOKEN_B_ADDRESS;
-  
+
+      setResultMsg("⏳ 正在购买...");
+
       const tx = await amm.buyWithETH(tokenAddress, {
         value: ethers.parseEther(ethRequired),
       });
-      await tx.wait();
-  
-      message.success(`成功购买 ${tokenAmount} Token ${tokenToBuy} ✅`);
-      setTokenAmount("");
-      setEthRequired("0");
-      fetchBalances(account); // 重新刷新余额
-  
-      window.dispatchEvent(new Event("priceRefresh")); // ✅ 通知刷新价格和图表
+      const receipt = await tx.wait();
+
+      if (receipt.status === 1) {
+        setResultMsg(`✅ 成功购买 ${tokenAmount} Token ${tokenToBuy}`);
+        setTokenAmount("");
+        setEthRequired("0");
+        setFeeEth("0");
+        fetchBalances(account!);
+        window.dispatchEvent(new Event("priceRefresh"));
+      } else {
+        setResultMsg("❌ 购买失败，请重试");
+      }
     } catch (err) {
       console.error("购买失败", err);
-      message.error("购买失败 ❌");
+      setResultMsg("❌ 交易失败或用户取消");
     }
   };
 
@@ -134,7 +150,10 @@ export default function BuyPage() {
 
         <Select
           value={tokenToBuy}
-          onChange={(v) => setTokenToBuy(v)}
+          onChange={(v) => {
+            setTokenToBuy(v);
+            if (tokenAmount) calculateRequiredETH(tokenAmount);
+          }}
           options={[
             { label: "Token A", value: "A" },
             { label: "Token B", value: "B" },
@@ -143,7 +162,7 @@ export default function BuyPage() {
         />
 
         <Input
-          placeholder="输入购买数量（仅用于预估）"
+          placeholder="输入购买数量"
           value={tokenAmount}
           onChange={(e) => setTokenAmount(e.target.value)}
           style={{
@@ -156,8 +175,14 @@ export default function BuyPage() {
           }}
         />
 
+        <Typography.Paragraph style={{ marginBottom: 4 }}>
+          当前动态手续费率：<strong>{(feeRate / 10).toFixed(1)}‰</strong>
+        </Typography.Paragraph>
+        <Typography.Paragraph style={{ marginBottom: 4 }}>
+          预计手续费 ≈ <strong>{feeEth}</strong> ETH
+        </Typography.Paragraph>
         <Typography.Text type="secondary">
-          当前预估需要支付 ETH：<strong>{ethRequired}</strong>
+          当前预估需支付总 ETH：<strong>{ethRequired}</strong>
         </Typography.Text>
 
         <Button
@@ -177,6 +202,15 @@ export default function BuyPage() {
         >
           购买 Token {tokenToBuy}
         </Button>
+
+        {resultMsg && (
+          <Alert
+            message={resultMsg}
+            type={resultMsg.startsWith("✅") ? "success" : resultMsg.startsWith("⏳") ? "info" : "error"}
+            showIcon
+            style={{ marginTop: 16 }}
+          />
+        )}
       </div>
     </Layout>
   );
