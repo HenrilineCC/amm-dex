@@ -5,6 +5,7 @@ import { ethers } from "ethers";
 import AMM_ABI from "../abi/AMM.json";
 import PriceBar from "./PriceBanner";
 import LimitOrderExecutor from "./LimitOrderExecutor";
+import DynamicBackground from "./DynamicBackground";
 
 const AMM_ADDRESS = process.env.NEXT_PUBLIC_AMM_ADDRESS!;
 const { Header, Content } = AntLayout;
@@ -34,24 +35,27 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AntLayout>
-      <PriceBar />
-      <LimitOrderExecutor /> {/* ✅  */}
+    <AntLayout style={{ position: 'relative', overflow: 'hidden', minHeight: '100vh' }}>
+      <DynamicBackground style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }} />
+      <div style={{ position: 'relative', zIndex: 2 }}>
+          <PriceBar />
+          <LimitOrderExecutor /> {/* ✅  */}
 
-      <Header style={{ display: "flex", justifyContent: "space-between" }}>
+          <Header style={{ display: "flex", justifyContent: "space-between" }}>
         <Typography.Title level={4} style={{ color: "#fff", margin: 0 }}>
           AMM DEX
         </Typography.Title>
         <Menu theme="dark" mode="horizontal">
           
         </Menu>
-      </Header>
+          </Header>
 
-      <Content style={{ padding: "2rem" }}>
+          <Content style={{ padding: "2rem" }}>
         {isOwner && <Typography.Text type="success">🛡️ You are the Contract Administrator</Typography.Text>}
         {!isLP && <Typography.Text type="warning">⚠️ The current address is not an LP user and cannot add liquidity</Typography.Text>}
         {children}
-      </Content>
-    </AntLayout>
+          </Content>
+        </div>
+      </AntLayout>
   );
 }
