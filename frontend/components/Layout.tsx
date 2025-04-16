@@ -40,7 +40,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       <Header style={{ display: "flex", justifyContent: "space-between" }}>
         <Typography.Title level={4} style={{ color: "#fff", margin: 0 }}>
-          🦄 AMM DEX 前端
+          AMM DEX
         </Typography.Title>
         <Menu theme="dark" mode="horizontal">
           <Menu.Item key="swap"><a href="/swap">Swap</a></Menu.Item>
