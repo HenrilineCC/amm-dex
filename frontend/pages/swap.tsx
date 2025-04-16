@@ -103,7 +103,7 @@ export default function SwapPage() {
       : ethers.parseUnits(balanceB, DECIMALS);
 
     if (parsedAmount > balance) {
-      setSwapResult("❌ Token 余额不足，无法交易");
+      setSwapResult("❌ Insufficient token balance, unable to trade");
       return;
     }
 
@@ -126,20 +126,20 @@ export default function SwapPage() {
       const receipt = await tx.wait();
 
       if (receipt.status === 1) {
-        setSwapResult("✅ Swap 成功");
+        setSwapResult("✅ Swap successfully");
         setAmountIn("");
         setAmountOut("0");
         loadBalances();
         window.dispatchEvent(new Event("priceRefresh"));
       } else {
-        setSwapResult("❌ Swap 失败");
+        setSwapResult("❌ fail to swap");
       }
     } catch (err: any) {
-      console.error("Swap 错误：", err);
+      console.error("Swap error：", err);
       if (err?.message?.includes("Slippage")) {
-        setSwapResult("⚠️ 滑点过高，交易失败");
+        setSwapResult("⚠️ Slippage is too high and the transaction fails");
       } else {
-        setSwapResult("❌ Swap 出现错误");
+        setSwapResult("❌ Swap error");
       }
     } finally {
       setLoading(false);
@@ -163,7 +163,7 @@ export default function SwapPage() {
 
         <Card style={{ marginBottom: 16, background: theme.inputBackground }}>
           <Typography.Text style={{ color: theme.textColor }}>
-            🎒 我的余额：
+            🎒 My Balance：
           </Typography.Text>
           <br />
           Token A: <strong>{balanceA}</strong>
@@ -172,7 +172,7 @@ export default function SwapPage() {
         </Card>
 
         <Alert
-          message={`当前手续费率：${(feeRate / 10).toFixed(1)}‰，约 ${feeAmount} Token`}
+          message={`Current Fee Rate：${(feeRate / 10).toFixed(1)}‰， ${feeAmount} Token`}
           type="info"
           showIcon
           style={{ marginBottom: 16 }}
@@ -193,11 +193,11 @@ export default function SwapPage() {
             borderRadius: 12
           }}
         >
-          切换方向：{direction === "AtoB" ? "A → B" : "B → A"}
+          Switch Direction：{direction === "AtoB" ? "A → B" : "B → A"}
         </Button>
 
         <Input
-          placeholder={`输入 ${direction === "AtoB" ? "Token A" : "Token B"} 数量`}
+          placeholder={`input ${direction === "AtoB" ? "Token A" : "Token B"} quantity`}
           value={amountIn}
           onChange={handleAmountChange}
           style={{
@@ -211,16 +211,16 @@ export default function SwapPage() {
         />
 
         <Typography.Text>
-          预估获得 {direction === "AtoB" ? "Token B" : "Token A"}：
+        Estimated gain {direction === "AtoB" ? "Token B" : "Token A"}：
           <strong>{amountOut}</strong>
         </Typography.Text>
         <br />
         <Typography.Text type="secondary">
-          最少可接受（滑点 {slippage}%）：{ethers.formatUnits(minOut, DECIMALS)}
+        Minimum acceptable (slippage {slippage}%）：{ethers.formatUnits(minOut, DECIMALS)}
         </Typography.Text>
 
         <div style={{ marginTop: "1rem" }}>
-          <Typography.Text>滑点容忍度：</Typography.Text>
+          <Typography.Text>Slippage tolerance：</Typography.Text>
           <Select
             value={slippage}
             onChange={(v) => {
@@ -254,7 +254,7 @@ export default function SwapPage() {
             fontWeight: 600
           }}
         >
-          执行 Swap
+          Execute Swap
         </Button>
 
         {swapResult && (

@@ -49,7 +49,7 @@ export default function PriceBanner() {
         fontWeight: 500,
       }}
     >
-      当前价格：Token A → B = {priceAtoB}，Token B → A = {priceBtoA}
+      Current Price：Token A → B = {priceAtoB}，Token B → A = {priceBtoA}
     </div>
   );
 }

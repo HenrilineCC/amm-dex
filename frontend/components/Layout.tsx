@@ -36,25 +36,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <AntLayout>
       <PriceBar />
-      <LimitOrderExecutor /> {/* ✅ 自动执行器注入 */}
+      <LimitOrderExecutor /> {/* ✅  */}
 
       <Header style={{ display: "flex", justifyContent: "space-between" }}>
         <Typography.Title level={4} style={{ color: "#fff", margin: 0 }}>
           AMM DEX
         </Typography.Title>
         <Menu theme="dark" mode="horizontal">
-          <Menu.Item key="swap"><a href="/swap">Swap</a></Menu.Item>
-          <Menu.Item key="liquidity"><a href="/liquidity">流动性</a></Menu.Item>
-          <Menu.Item key="chart"><a href="/chart">图表</a></Menu.Item>
-          <Menu.Item key="limit"><a href="/limit">限价交易</a></Menu.Item>
-          <Menu.Item key="history"><a href="/history">历史记录</a></Menu.Item>
-          {isOwner && <Menu.Item key="admin"><a href="/admin">管理功能</a></Menu.Item>}
+          
         </Menu>
       </Header>
 
       <Content style={{ padding: "2rem" }}>
-        {isOwner && <Typography.Text type="success">🛡️ 你是合约管理员</Typography.Text>}
-        {!isLP && <Typography.Text type="warning">⚠️ 当前地址不是 LP 用户，无法添加流动性</Typography.Text>}
+        {isOwner && <Typography.Text type="success">🛡️ You are the Contract Administrator</Typography.Text>}
+        {!isLP && <Typography.Text type="warning">⚠️ The current address is not an LP user and cannot add liquidity</Typography.Text>}
         {children}
       </Content>
     </AntLayout>

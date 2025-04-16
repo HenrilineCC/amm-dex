@@ -51,7 +51,7 @@ export default function LiquidityPage() {
   const addLiquidity = async () => {
     if (!account || !amountA || !amountB) return;
     if (!isLPUser) {
-      setFeedback("⚠️ 你没有 LP 权限，无法添加流动性");
+      setFeedback("⚠️ You do not have LP permissions and cannot add liquidity");
       return;
     }
 
@@ -82,13 +82,13 @@ export default function LiquidityPage() {
       const tx = await amm.addLiquidity(parsedA, parsedB);
       await tx.wait();
 
-      setFeedback("✅ 添加流动性成功");
+      setFeedback("✅ Liquidity added successfully");
       setAmountA("");
       setAmountB("");
       fetchUserLP(account);
     } catch (err) {
       console.error(err);
-      setFeedback("❌ 添加流动性失败");
+      setFeedback("❌ Failed to add liquidity");
     } finally {
       setLoading(false);
     }
@@ -97,7 +97,7 @@ export default function LiquidityPage() {
   const removeLiquidity = async () => {
     if (!account || !lpAmount) return;
     if (!isLPUser) {
-      setFeedback("⚠️ 你没有 LP 权限，无法移除流动性");
+      setFeedback("⚠️ You do not have LP permissions and cannot remove liquidity");
       return;
     }
 
@@ -111,12 +111,12 @@ export default function LiquidityPage() {
       const tx = await amm.removeLiquidity(parsed);
       await tx.wait();
 
-      setFeedback("✅ 移除流动性成功");
+      setFeedback("✅ Liquidity removal successful");
       setLpAmount("");
       fetchUserLP(account);
     } catch (err) {
       console.error(err);
-      setFeedback("❌ 移除流动性失败");
+      setFeedback("❌ Failed to remove liquidity");
     } finally {
       setLoading(false);
     }
@@ -137,40 +137,40 @@ export default function LiquidityPage() {
         }}
       >
         <Typography.Title level={3} style={{ color: theme.textColor }}>
-          💧 流动性管理
+          💧 Liquidity Management
         </Typography.Title>
 
-        <Typography.Text>你当前的 LP Token：<strong>{userLP}</strong></Typography.Text>
+        <Typography.Text>Your current LP Token：<strong>{userLP}</strong></Typography.Text>
         <Divider />
 
-        <Typography.Title level={5}>添加流动性</Typography.Title>
+        <Typography.Title level={5}>Adding Liquidity</Typography.Title>
         <Input
-          placeholder="Token A 数量"
+          placeholder="Token A Quantity"
           value={amountA}
           onChange={(e) => setAmountA(e.target.value)}
           style={{ marginBottom: 12 }}
         />
         <Input
-          placeholder="Token B 数量"
+          placeholder="Token B Quantity"
           value={amountB}
           onChange={(e) => setAmountB(e.target.value)}
           style={{ marginBottom: 12 }}
         />
         <Button type="primary" block onClick={addLiquidity} loading={loading}>
-          添加流动性
+        Adding Liquidity
         </Button>
 
         <Divider />
 
-        <Typography.Title level={5}>移除流动性</Typography.Title>
+        <Typography.Title level={5}>Removing Liquidity</Typography.Title>
         <Input
-          placeholder="输入移除的 LP Token 数量"
+          placeholder="Enter the number of LP Tokens to be removed"
           value={lpAmount}
           onChange={(e) => setLpAmount(e.target.value)}
           style={{ marginBottom: 12 }}
         />
         <Button danger block onClick={removeLiquidity} loading={loading}>
-          移除流动性
+        Removing Liquidity
         </Button>
 
         <Divider />

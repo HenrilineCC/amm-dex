@@ -70,11 +70,11 @@ export default function PoolStatusPage() {
 
       const tx = await contract.withdrawFees();
       await tx.wait();
-      message.success("手续费已成功提取 ✅");
+      message.success("The handling fee has been successfully withdrawn ✅");
       loadPoolData();
     } catch (err) {
       console.error(err);
-      message.error("手续费提取失败 ❌");
+      message.error("Fee withdrawal failed ❌");
     }
   };
 
@@ -93,7 +93,7 @@ export default function PoolStatusPage() {
         }}
       >
         <Typography.Title level={3} style={{ color: theme.textColor }}>
-          📊 AMM 池子状态
+          📊 AMM Pool Status
         </Typography.Title>
 
         <Card
@@ -128,7 +128,7 @@ export default function PoolStatusPage() {
             boxShadow: theme.cardShadow,
           }}
         >
-          LP Token 总供应量：<strong>{lpTotalSupply}</strong>
+          LP Token Total Supply:<strong>{lpTotalSupply}</strong>
         </Card>
 
         {isOwner && (
@@ -141,13 +141,13 @@ export default function PoolStatusPage() {
                 boxShadow: theme.cardShadow,
               }}
             >
-              <Typography.Text strong>累积手续费（仅管理员可见）</Typography.Text> <br />
+              <Typography.Text strong>Cumulative handling fee (only visible to administrators)</Typography.Text> <br />
               Token A: <strong>{feesA}</strong> <br />
               Token B: <strong>{feesB}</strong>
             </Card>
 
             <Button type="primary" block onClick={handleWithdrawFees}>
-              提取全部手续费
+            Withdraw all fees
             </Button>
           </>
         )}

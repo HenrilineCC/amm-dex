@@ -43,7 +43,7 @@ export default function HomePage() {
               fontWeight: 600
             }}
           >
-            连接钱包
+            Connect your wallet
           </Button>
         ) : (
           <Title level={4} style={{ color: theme.textColor }}>Connected: {account}</Title>

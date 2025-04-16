@@ -33,9 +33,7 @@ export default function ChartPage() {
   const [lpSupplyMap, setLpSupplyMap] = useState<Map<number, number>>(new Map());
 
   useEffect(() => {
-    if (window.ethereum) {
-      loadData();
-    }
+    if (window.ethereum) loadData();
   }, []);
 
   const loadData = async () => {
@@ -62,7 +60,6 @@ export default function ChartPage() {
       const reserveB = await contract.reserveB({ blockTag: log.blockNumber });
       const isBuyA = tokenOut.toLowerCase() === TOKEN_A.toLowerCase();
       const tokenIn = isBuyA ? TOKEN_B : TOKEN_A;
-
       all.push({
         block: log.blockNumber,
         type: "Buy",
@@ -91,7 +88,6 @@ export default function ChartPage() {
     all.sort((a, b) => a.block - b.block);
     setPoints(all);
 
-    // 💡 读取 LP 总量随区块变化
     const lpMap = new Map<number, number>();
     for (const point of all) {
       const total = await contract.totalSupply({ blockTag: point.block });
@@ -105,34 +101,50 @@ export default function ChartPage() {
   const getOption = () => {
     if (chartType === "KLine") {
       const grouped = new Map<number, number[]>();
+    
       points.forEach((p) => {
         if (!p.amountIn || !p.amountOut) return;
+    
         const group = Math.floor(p.block / GROUP_SIZE) * GROUP_SIZE;
         const price = format(p.amountOut) / format(p.amountIn || 1n);
+    
         if (!grouped.has(group)) grouped.set(group, []);
         grouped.get(group)!.push(price);
       });
-
-      const ohlc = Array.from(grouped.entries()).map(([block, prices]) => [
-        block,
-        prices[0],
-        Math.max(...prices),
-        Math.min(...prices),
-        prices[prices.length - 1],
-      ]);
-
+    
+      const ohlcData: { block: number; ohlc: [number, number, number, number] }[] = [];
+    
+      for (const [block, prices] of grouped.entries()) {
+        if (!prices.length) continue;
+    
+        const open = prices[0];
+        const close = prices[prices.length - 1];
+        const high = Math.max(...prices, open, close);
+        const low = Math.min(...prices, open, close);
+    
+        ohlcData.push({ block, ohlc: [open, close, low, high] });
+      }
+    
       return {
-        title: { text: "价格 K 线图" },
+        title: { text: "Price candlestick chart" },
         tooltip: { trigger: "axis" },
-        xAxis: { type: "category", data: ohlc.map((o) => o[0].toString()) },
+        xAxis: {
+          type: "category",
+          data: ohlcData.map((o) => o.block.toString())
+        },
         yAxis: { type: "value" },
-        series: [{ type: "candlestick", data: ohlc.map(([, o, h, l, c]) => [o, h, l, c]) }],
+        series: [
+          {
+            type: "candlestick",
+            data: ohlcData.map((o) => o.ohlc)
+          }
+        ]
       };
     }
 
     if (chartType === "Reserve") {
       return {
-        title: { text: "Token 储备变化" },
+        title: { text: "Token Reserve Changes" },
         tooltip: { trigger: "axis" },
         legend: { data: ["Reserve A", "Reserve B"] },
         xAxis: { type: "category", data: points.map((p) => p.block) },
@@ -147,7 +159,7 @@ export default function ChartPage() {
     if (chartType === "Volume") {
       const relevant = points.filter((p) => p.type === "Swap" || p.type === "Buy");
       return {
-        title: { text: "Swap / Buy 成交量" },
+        title: { text: "Swap / Buy Volume" },
         tooltip: { trigger: "axis" },
         xAxis: { type: "category", data: relevant.map((p) => p.block) },
         yAxis: { type: "value" },
@@ -158,7 +170,7 @@ export default function ChartPage() {
     if (chartType === "Liquidity") {
       const blocks = Array.from(lpSupplyMap.keys());
       return {
-        title: { text: "LP Token 总供应量" },
+        title: { text: "LP Token Total Supply" },
         tooltip: { trigger: "axis" },
         xAxis: { type: "category", data: blocks.map((b) => b.toString()) },
         yAxis: { type: "value" },
@@ -192,7 +204,6 @@ export default function ChartPage() {
         }
       });
 
-      // 加入最新价格
       if (points.length > 0) {
         const latest = points[points.length - 1];
         const reserveA = format(latest.reserveA);
@@ -205,11 +216,11 @@ export default function ChartPage() {
       }
 
       return {
-        title: { text: `Token ${isA ? "A→B" : "B→A"} 价格走势` },
+        title: { text: `Token ${isA ? "A→B" : "B→A"} Price Trends` },
         tooltip: { trigger: "axis" },
         xAxis: { type: "category", data: prices.map((p) => p.block.toString()) },
         yAxis: { type: "value" },
-        series: [{ type: "line", name: "价格", data: prices.map((p) => p.price) }],
+        series: [{ type: "line", name: "price", data: prices.map((p) => p.price) }],
       };
     }
 
@@ -224,12 +235,12 @@ export default function ChartPage() {
         <PriceBanner />
         <Segmented
           options={[
-            { label: "K线", value: "KLine" },
-            { label: "储备量", value: "Reserve" },
+            { label: "K line", value: "KLine" },
+            { label: "Reserve", value: "Reserve" },
             { label: "Swap + Buy", value: "Volume" },
-            { label: "LP 变化", value: "Liquidity" },
-            { label: "Token A 价格", value: "PriceA" },
-            { label: "Token B 价格", value: "PriceB" },
+            { label: "LP Changes", value: "Liquidity" },
+            { label: "Token A price", value: "PriceA" },
+            { label: "Token B price", value: "PriceB" },
           ]}
           value={chartType}
           onChange={(val) => setChartType(val as ChartType)}

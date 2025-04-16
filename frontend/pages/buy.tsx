@@ -92,7 +92,7 @@ export default function BuyPage() {
 
       const tokenAddress = tokenToBuy === "A" ? TOKEN_A_ADDRESS : TOKEN_B_ADDRESS;
 
-      setResultMsg("⏳ 正在购买...");
+      setResultMsg("⏳ buying...");
 
       const tx = await amm.buyWithETH(tokenAddress, {
         value: ethers.parseEther(ethRequired),
@@ -100,18 +100,18 @@ export default function BuyPage() {
       const receipt = await tx.wait();
 
       if (receipt.status === 1) {
-        setResultMsg(`✅ 成功购买 ${tokenAmount} Token ${tokenToBuy}`);
+        setResultMsg(`✅ successfully buy  ${tokenAmount} Token ${tokenToBuy}`);
         setTokenAmount("");
         setEthRequired("0");
         setFeeEth("0");
         fetchBalances(account!);
         window.dispatchEvent(new Event("priceRefresh"));
       } else {
-        setResultMsg("❌ 购买失败，请重试");
+        setResultMsg("❌ Purchase failed, please try again");
       }
     } catch (err) {
-      console.error("购买失败", err);
-      setResultMsg("❌ 交易失败或用户取消");
+      console.error("Purchase failed", err);
+      setResultMsg("❌ Transaction failed or user canceled");
     }
   };
 
@@ -130,19 +130,19 @@ export default function BuyPage() {
         }}
       >
         <Typography.Title level={3} style={{ color: theme.textColor }}>
-          🛒 购买 Token
+          🛒 buy Token
         </Typography.Title>
         <PriceBanner />
 
         {account && (
           <>
             <Typography.Paragraph style={{ color: theme.textColor }}>
-              👛 当前账户：<strong>{account}</strong>
+              👛 Current Account：<strong>{account}</strong>
             </Typography.Paragraph>
             <Typography.Paragraph style={{ color: theme.textColor }}>
-              🎒 Token A 余额：<strong>{balanceA}</strong>
+              🎒 Token A balance：<strong>{balanceA}</strong>
               <br />
-              🎒 Token B 余额：<strong>{balanceB}</strong>
+              🎒 Token B balance：<strong>{balanceB}</strong>
             </Typography.Paragraph>
             <Divider />
           </>
@@ -162,7 +162,7 @@ export default function BuyPage() {
         />
 
         <Input
-          placeholder="输入购买数量"
+          placeholder="Enter the purchase quantity"
           value={tokenAmount}
           onChange={(e) => setTokenAmount(e.target.value)}
           style={{
@@ -176,13 +176,13 @@ export default function BuyPage() {
         />
 
         <Typography.Paragraph style={{ marginBottom: 4 }}>
-          当前动态手续费率：<strong>{(feeRate / 10).toFixed(1)}‰</strong>
+        Current dynamic fee rate：<strong>{(feeRate / 10).toFixed(1)}‰</strong>
         </Typography.Paragraph>
         <Typography.Paragraph style={{ marginBottom: 4 }}>
-          预计手续费 ≈ <strong>{feeEth}</strong> ETH
+        Estimated handling fee ≈ <strong>{feeEth}</strong> ETH
         </Typography.Paragraph>
         <Typography.Text type="secondary">
-          当前预估需支付总 ETH：<strong>{ethRequired}</strong>
+        Current estimated total payment ETH：<strong>{ethRequired}</strong>
         </Typography.Text>
 
         <Button
@@ -200,7 +200,7 @@ export default function BuyPage() {
             fontWeight: 600,
           }}
         >
-          购买 Token {tokenToBuy}
+          buy Token {tokenToBuy}
         </Button>
 
         {resultMsg && (

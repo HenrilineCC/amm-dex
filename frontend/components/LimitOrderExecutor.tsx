@@ -72,7 +72,7 @@ export default function LimitOrderExecutor() {
 
     const tx = await amm.swap(tokenIn, parsedAmount);
     const receipt = await tx.wait();
-    if (receipt.status !== 1) throw new Error("Swap 失败");
+    if (receipt.status !== 1) throw new Error("fail to swap ");
     return tx.hash;
   };
 

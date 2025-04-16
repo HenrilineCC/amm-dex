@@ -106,7 +106,7 @@ export default function HistoryPage() {
         boxShadow: theme.cardShadow,
         marginTop: 16
       }}>
-      <Typography.Title level={3} style={{ color: theme.textColor }}>📜 交易 & 流动性历史记录</Typography.Title>
+      <Typography.Title level={3} style={{ color: theme.textColor }}>📜 Trading & Liquidity History</Typography.Title>
 
       <List
         dataSource={events}
@@ -118,7 +118,7 @@ export default function HistoryPage() {
   boxShadow: theme.cardShadow
 }}>
             <Typography.Text>
-              类型：
+              type：
               <Tag color={
                 item.type === "Swap" ? "blue" :
                 item.type === "AddLiquidity" ? "green" :
@@ -141,10 +141,10 @@ export default function HistoryPage() {
                 </>
               )}
               <br />
-              区块号：{item.blockNumber}
+              block number：{item.blockNumber}
               <br />
               <a href={`https://sepolia.etherscan.io/tx/${item.txHash}`} target="_blank" rel="noreferrer">
-                查看交易
+              View Deal
               </a>
             </Typography.Text>
           </Card>
